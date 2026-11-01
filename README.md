@@ -171,10 +171,35 @@ flowchart TD
     INIT --> RM[route_mode node]
     RM -->|mode=model via _select_mode| CM[call_model node]
     RM -->|mode=local via _select_mode| LF[local_fallback node]
-    CM --> SEL{_select_model_next}
-    SEL -->|No tool calls| FM[finish_model node]
-    SEL -->|Calls remain, under limit| ET[execute_tools node]
-    ET --> CM
+    CM --> META[Meta Chat Completions API<br/>LLM chooses text response or tool_calls]
+    META --> SEL{_select_model_next<br/>inspect tool_calls}
+    SEL -->|No tool calls: answer directly| FM[finish_model node]
+    SEL -->|Tool call(s), below limit| ET[execute_tools node]
+    subgraph REGISTRY[Inside execute_tools: TrafficAgentTools registry]
+        ET --> CHECK[Parse arguments and validate schema]
+        CHECK --> WHICH{Dispatch by tool name}
+        WHICH --> CITY[simulate_city_scenario]
+        WHICH --> CITYPPO[evaluate_city_policy]
+        WHICH --> RUN[run_simulation]
+        WHICH --> CMP[compare_controllers]
+        WHICH --> PPOT[compare_ppo_with_fixed]
+        WHICH --> SCEN[generate_traffic_scenario]
+        WHICH --> OPT[optimize_signal]
+        WHICH --> PRED[predict_traffic]
+        WHICH --> INSP[inspect_experiment]
+        WHICH --> TRANS[explain_last_transition]
+        CITY --> REC[Record tool name, arguments, and result]
+        CITYPPO --> REC
+        RUN --> REC
+        CMP --> REC
+        PPOT --> REC
+        SCEN --> REC
+        OPT --> REC
+        PRED --> REC
+        INSP --> REC
+        TRANS --> REC
+    end
+    REC -->|Append results to messages for Meta| CM
     SEL -->|Round limit reached| TL[tool_limit node raises ProviderError]
     FM --> OUT[Answer, provider, tool steps, evidence]
     LF --> OUT2[Local answer and tool evidence]
@@ -184,6 +209,10 @@ flowchart TD
     INIT2 --> RM
     WRAP -->|fallback disabled| ERR[Return provider error]
 ```
+
+**Tool selection is the central decision in this workflow.** The `call_model` LangGraph node calls the Meta API. Meta chooses whether to return text immediately or provide one or more named `tool_calls` with JSON arguments. The `_select_model_next` conditional router reads that response and sends tool requests to `execute_tools`; the Python registry then validates and runs the selected implementation. Its results return to Meta as messages, so the model can interpret evidence, select another tool, or finish with an answer.
+
+The ten named boxes inside `REGISTRY` are Python tool implementations dispatched **within** the single LangGraph `execute_tools` node; they are not additional LangGraph nodes. Of the traffic-agent graph's nodes, only `call_model` makes an LLM API call. `route_mode` and `_select_model_next` route state, `execute_tools` runs local Python, and the remaining nodes assemble a result or handle fallback/limits. The separate executive-report narrative also calls Meta, but it is a direct provider call outside LangGraph. The vehicle-demand graph contains no LLM calls.
 
 | LangGraph node or router | What the implementation does | State passed forward |
 | --- | --- | --- |
