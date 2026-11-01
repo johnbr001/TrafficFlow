@@ -1,0 +1,12 @@
+.env
+.venv/
+__pycache__/
+*.py[cod]
+cache/
+experiments/results/*
+!experiments/results/.gitkeep
+experiments/tensorboard/
+aatc/rl/models/*
+!aatc/rl/models/.gitkeep
+data/cities/*
+!data/cities/.gitkeep

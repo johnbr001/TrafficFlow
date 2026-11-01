@@ -1,0 +1,16 @@
+{
+  "algorithm": "PPO",
+  "total_timesteps": 100000,
+  "learning_rate": 0.0003,
+  "gamma": 0.99,
+  "decision_interval_s": 5,
+  "min_green_s": 10,
+  "max_green_s": 60,
+  "normalization": {
+    "queue_vehicles": 40,
+    "vehicles": 50,
+    "speed_mps": 13.89,
+    "waiting_seconds": 300,
+    "arrival_rate_vehicles_per_second": 1
+  }
+}

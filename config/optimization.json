@@ -1,0 +1,20 @@
+{
+  "green_values_s": [20, 30, 40, 50],
+  "min_green_s": 10,
+  "max_green_s": 60,
+  "yellow_duration_s": 3,
+  "all_red_duration_s": 1,
+  "objective": "balanced",
+  "score_normalizers": {
+    "waiting_seconds": 300,
+    "queue_vehicles": 30,
+    "travel_time_seconds": 300,
+    "throughput_vehicles": 300
+  },
+  "balanced_weights": {
+    "waiting": 0.4,
+    "queue": 0.3,
+    "travel_time": 0.2,
+    "throughput": 0.1
+  }
+}

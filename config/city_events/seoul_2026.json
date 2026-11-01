@@ -1,0 +1,38 @@
+{
+  "city": "Seoul",
+  "year": 2026,
+  "source_kind": "Seoul Metropolitan Government official event listings",
+  "retrieved_date": "2026-11-01",
+  "events": [
+    {
+      "event_id": "seoul_autumn_festival_2026",
+      "name": "2026 Seoul Autumn Festival",
+      "category": "citywide_performing_arts_festival",
+      "start_date": "2026-09-19",
+      "end_date": "2026-11-29",
+      "location": "Citywide venues including Daehak-ro and Hangang areas",
+      "latitude": 37.5820,
+      "longitude": 127.0020,
+      "traffic_impact_assumption": "high_event_demand_near_venue",
+      "impact_is_measured": false,
+      "expected_attendance": null,
+      "confidence": "official date range and distributed locations; no event-hour or local attendance estimate",
+      "source_url": "https://english.seoul.go.kr/the-fun-seoul-seoul-to-become-global-cultural-hub-hosting-festivals-all-year-round/"
+    },
+    {
+      "event_id": "seoul_winter_festival_2026_2027",
+      "name": "2026 Seoul Winter Festival",
+      "category": "citywide_winter_festival",
+      "start_date": "2026-12-04",
+      "end_date": "2027-01-31",
+      "location": "Multiple locations including Gwanghwamun Square, Cheonggyecheon Stream, Seoul Plaza, Bosingak Pavilion, and DDP",
+      "latitude": 37.5729,
+      "longitude": 126.9794,
+      "traffic_impact_assumption": "elevated_evening_demand_near_venues",
+      "impact_is_measured": false,
+      "expected_attendance": null,
+      "confidence": "official date range and venues; no event-hour or local attendance estimate",
+      "source_url": "https://english.seoul.go.kr/the-fun-seoul-seoul-to-become-global-cultural-hub-hosting-festivals-all-year-round/"
+    }
+  ]
+}

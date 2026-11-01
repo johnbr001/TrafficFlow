@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "note": "Scenario multipliers are initial planning assumptions, not measured Korean city traffic counts.",
+  "day_type_multipliers": {"weekday": 1.0, "saturday": 0.78, "sunday": 0.68, "public_holiday": 0.58},
+  "periods": [
+    {"id": "night", "start": "00:00", "end": "05:00", "demand_multiplier": 0.25, "profile": "low"},
+    {"id": "early_morning", "start": "05:00", "end": "07:00", "demand_multiplier": 0.40, "profile": "low_rising"},
+    {"id": "morning_rush", "start": "07:00", "end": "09:00", "demand_multiplier": 1.50, "profile": "commute_inbound"},
+    {"id": "late_morning", "start": "09:00", "end": "11:00", "demand_multiplier": 0.85, "profile": "moderate"},
+    {"id": "lunch", "start": "11:00", "end": "13:00", "demand_multiplier": 1.05, "profile": "local_commercial"},
+    {"id": "afternoon", "start": "13:00", "end": "17:00", "demand_multiplier": 0.85, "profile": "moderate"},
+    {"id": "evening_rush", "start": "17:00", "end": "20:00", "demand_multiplier": 1.50, "profile": "commute_outbound"},
+    {"id": "evening", "start": "20:00", "end": "22:00", "demand_multiplier": 0.60, "profile": "declining"},
+    {"id": "night_late", "start": "22:00", "end": "24:00", "demand_multiplier": 0.30, "profile": "low"}
+  ],
+  "directional_assumption": {
+    "morning_rush": {"toward_potential_job_centers": 1.25, "away_from_job_centers": 0.80},
+    "evening_rush": {"toward_residential_areas": 1.25, "away_from_residential_areas": 0.80},
+    "lunch": {"toward_commercial_pois": 1.15, "other_movements": 0.95},
+    "default": {"all_movements": 1.0}
+  },
+  "event_multipliers": {"high_event_demand_near_venue": 1.35,
+                        "elevated_evening_demand_near_venues": 1.20,
+                        "elevated_evening_and_weekend_demand_near_venue": 1.15}
+}

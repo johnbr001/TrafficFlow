@@ -1,0 +1,18 @@
+numpy>=1.24
+
+# Phase 3: Gymnasium environment and PPO (TraCI/sumolib are from SUMO_HOME/tools).
+gymnasium>=1.0,<1.3
+stable-baselines3>=2.7,<3
+tensorboard>=2.15
+
+# Phase 5: explicit agent workflow graph
+langgraph>=1.0,<2; python_version >= "3.10"
+langgraph>=0.6.11,<1; python_version < "3.10"
+
+# Real-world map and scenario calendar data
+osmnx>=2,<3; python_version >= "3.10"
+osmnx>=1.9,<2; python_version < "3.10"
+holidays>=0.44,<1
+
+# Phase 6: experiment monitoring dashboard
+streamlit>=1.40,<2

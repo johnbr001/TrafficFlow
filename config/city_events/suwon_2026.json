@@ -1,0 +1,57 @@
+{
+  "city": "Suwon",
+  "year": 2026,
+  "source_kind": "official_city_event_pages",
+  "retrieved_date": "2026-11-01",
+  "events": [
+    {
+      "event_id": "suwon_hwaseong_cultural_festival_2026",
+      "name": "Suwon Hwaseong Cultural Festival (63rd)",
+      "category": "local_festival",
+      "start_date": "2026-10-04",
+      "end_date": "2026-10-11",
+      "start_time": "11:00",
+      "end_time": "22:00",
+      "location": "Hwaseong Haenggung Square and Suwon Hwaseong area",
+      "latitude": 37.2808,
+      "longitude": 127.0150,
+      "traffic_impact_assumption": "high_event_demand_near_venue",
+      "impact_is_measured": false,
+      "expected_attendance": null,
+      "confidence": "official_dates_and_location; no attendance estimate",
+      "source_url": "https://www.suwon.go.kr/culture/ingCultureView.do?ctrSeqNo=2119"
+    },
+    {
+      "event_id": "suwon_hwaseong_media_art_2026",
+      "name": "2026 Suwon Hwaseong Media Art",
+      "category": "tourism_event",
+      "start_date": "2026-09-19",
+      "end_date": "2026-10-06",
+      "start_time": "18:00",
+      "end_time": "22:00",
+      "location": "Hwaseomun, Janganmun, Jangan Park",
+      "latitude": 37.2864,
+      "longitude": 127.0093,
+      "traffic_impact_assumption": "elevated_evening_demand_near_venues",
+      "impact_is_measured": false,
+      "expected_attendance": null,
+      "confidence": "official_dates_and_locations; no attendance estimate",
+      "source_url": "https://www.suwon.go.kr/culture/ingCultureView.do?ctrSeqNo=2130"
+    },
+    {
+      "event_id": "suwon_hwaseong_haenggung_night_opening_2026",
+      "name": "Hwaseong Haenggung Night Opening",
+      "category": "tourism_event",
+      "start_date": "2026-05-01",
+      "end_date": "2026-11-01",
+      "location": "Hwaseong Haenggung",
+      "latitude": 37.2819,
+      "longitude": 127.0158,
+      "traffic_impact_assumption": "elevated_evening_and_weekend_demand_near_venue",
+      "impact_is_measured": false,
+      "expected_attendance": null,
+      "confidence": "official event calendar; dates and operating details can change",
+      "source_url": "https://www.suwon.go.kr/culture/smartSearchList.do?q_ingYn=0"
+    }
+  ]
+}

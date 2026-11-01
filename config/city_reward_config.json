@@ -1,0 +1,9 @@
+{
+  "queue_weight": 0.25,
+  "waiting_weight": 0.025,
+  "throughput_weight": 1.0,
+  "invalid_action_penalty": 0.25,
+  "switch_penalty": 0.05,
+  "queue_normalizer": 40.0,
+  "waiting_normalizer": 300.0
+}

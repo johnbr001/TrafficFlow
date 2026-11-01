@@ -1,0 +1,14 @@
+{
+  "provider": "meta",
+  "base_url": "https://api.meta.ai/v1",
+  "model_env": "META_MODEL",
+  "api_key_env": "MODEL_API_KEY",
+  "timeout_seconds": 45,
+  "temperature": 0.2,
+  "reasoning_effort": "low",
+  "max_tokens": 800,
+  "max_tool_rounds": 4,
+  "fallback_to_local": true,
+  "default_simulation_duration_s": 180,
+  "max_tool_simulation_duration_s": 1800
+}
