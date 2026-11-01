@@ -174,7 +174,7 @@ flowchart TD
     CM --> META[Meta Chat Completions API<br/>LLM chooses text response or tool_calls]
     META --> SEL{_select_model_next<br/>inspect tool_calls}
     SEL -->|No tool calls: answer directly| FM[finish_model node]
-    SEL -->|Tool call(s), below limit| ET[execute_tools node]
+    SEL -->|Tool calls below limit| ET[execute_tools node]
     subgraph REGISTRY[Inside execute_tools: TrafficAgentTools registry]
         ET --> CHECK[Parse arguments and validate schema]
         CHECK --> WHICH{Dispatch by tool name}
