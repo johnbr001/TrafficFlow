@@ -159,33 +159,71 @@ The successful response is JSON in the public service-style `response.header` / 
 
 ## What Meta AI and LangGraph do
 
-The optional Meta-backed traffic assistant is a bounded agent workflow. LangGraph coordinates the steps; Meta supplies natural-language interpretation and response generation. LangGraph itself is not an AI model and does not simulate traffic.
+The traffic assistant uses Meta for natural-language interpretation and explanation. LangGraph runs the Python workflow around the model: it keeps request state, routes between model and local handling, executes approved tools, and returns evidence. Meta does not run SUMO, train PPO, or control a live traffic light. The graph is created in `aatc/agent/workflow.py`; `TrafficAgent.ask()` in `aatc/agent/traffic_agent.py` configures and invokes it.
 
-The agent graph is implemented in `aatc/agent/workflow.py` and is invoked by `TrafficAgent.ask()`:
+### Traffic-agent graph: exact nodes and transitions
+
+Each call starts with a new `TrafficAgentState`. It contains the user question, selected mode, conversation messages, the latest model message and tool calls, accumulated tool steps, tool-round count, final result, and any provider error. No conversation history is loaded from earlier user requests.
 
 ```mermaid
 flowchart TD
-    A[User question] --> B[Select model or local route]
-    B -->|Meta configured| C[Send conversation and allowed tool definitions]
-    B -->|No Meta configuration| H[Deterministic local fallback]
-    C --> D{Meta requests a tool?}
-    D -->|Yes, within round limit| E[Validate and execute Python tool]
-    E --> F[Append measured result to conversation]
-    F --> C
-    D -->|No| G[Return Meta answer with evidence]
-    C -->|Provider error or tool limit| H
-    H --> I[Return local answer and tool evidence]
+    Q[TrafficAgent.ask question] --> INIT[Create state and choose mode]
+    INIT --> RM[route_mode node]
+    RM -->|mode=model via _select_mode| CM[call_model node]
+    RM -->|mode=local via _select_mode| LF[local_fallback node]
+    CM --> SEL{_select_model_next}
+    SEL -->|No tool calls| FM[finish_model node]
+    SEL -->|Calls remain, under limit| ET[execute_tools node]
+    ET --> CM
+    SEL -->|Round limit reached| TL[tool_limit node raises ProviderError]
+    FM --> OUT[Answer, provider, tool steps, evidence]
+    LF --> OUT2[Local answer and tool evidence]
+    CM -. provider error .-> WRAP[TrafficAgent.ask catches ProviderError]
+    TL -. exception .-> WRAP
+    WRAP -->|fallback enabled| INIT2[Invoke graph again with mode=local]
+    INIT2 --> RM
+    WRAP -->|fallback disabled| ERR[Return provider error]
 ```
 
-1. **Route the request.** The graph starts each request with a fresh state containing the question and message history. It selects Meta mode when the configured provider, API key, and model are available. Otherwise, it selects the local fallback.
-2. **Ask Meta to interpret and plan.** In Meta mode the provider sends the system prompt, current messages, and allowlisted tool schemas to the Meta Chat Completions endpoint. Meta may answer directly or request a tool by name with JSON arguments. The model can interpret the user's intent, choose among available analysis/simulation tools, and explain returned data; it does not have direct TraCI access.
-3. **Validate and run requested tools.** `execute_tools` parses the model's arguments and sends them to `TrafficAgentTools.execute()`. The registry only exposes explicitly listed operations, validates their allowed names/arguments, and calls project Python code. Tools can run SUMO scenarios, compare controllers, evaluate a saved city PPO policy, optimize bounded timing candidates, generate demand scenarios, inspect saved runs, project queues from saved samples, or explain a recorded transition. SUMO and its safety checks perform the actual traffic simulation and signal decisions.
-4. **Give evidence back to Meta.** Each tool result is appended to the conversation as structured JSON. The graph calls Meta again so it can explain the measured output. Multiple tool rounds are allowed, bounded by `max_tool_rounds` in `config/agent.json` (currently 4). The graph returns the answer, tool calls/results, and evidence used.
-5. **Fall back safely.** If Meta is not configured, or a provider error/tool-round limit occurs and `fallback_to_local` is enabled, a deterministic intent matcher chooses from the same Python tools. That fallback is not another LLM and does not provide model reasoning. The response identifies whether `meta` or `local_tools` handled it.
+| LangGraph node or router | What the implementation does | State passed forward |
+| --- | --- | --- |
+| `route_mode` | Node function is intentionally a no-op. It marks the graph's routing point; the conditional router `_select_mode` reads `state["mode"]` and chooses the model route or local route. `TrafficAgent` decides the initial mode from `AGENT_PROVIDER`, `MODEL_API_KEY`/`META_API_KEY`, and `META_MODEL`. | Keeps the initial question, messages, counters, and result fields unchanged. |
+| `call_model` | Calls `MetaProvider.complete(messages, tool_schemas)`. The provider sends a `POST` to `https://api.meta.ai/v1/chat/completions` with the configured model, system prompt, conversation, and tool definitions. Tool calling is automatic (`tool_choice=auto`) and parallel tool calls are disabled. | Stores the returned assistant message and its `tool_calls`. Invalid response shapes raise `ProviderError`. |
+| `_select_model_next` (conditional router) | Examines the last Meta response. It routes to `finish_model` when there are no tool calls, to `execute_tools` when calls remain and the configured limit is not reached, or to `tool_limit` when the limit has been reached. The limit is `max_tool_rounds` in `config/agent.json` (4 by default). | Reads `tool_calls` and `tool_rounds`; does not change state. |
+| `execute_tools` | Adds Meta's assistant tool-call message to the conversation. For each call it parses the JSON arguments and calls `TrafficAgentTools.execute(name, arguments)`. The registry rejects unknown tool names and validates inputs against the declared schemas before dispatching to project Python code. It appends each tool result as a tool message for Meta and records the call, arguments, and result in `tool_steps`. | Updates `messages`, `tool_steps`, increments `tool_rounds`, and clears the just-handled tool calls/message. The normal edge loops back to `call_model`, allowing Meta to interpret the evidence or request another allowed operation. |
+| `finish_model` | Extracts Meta's final text (including text-block responses) and assembles the model-mode response. | Sets `result` with `answer`, `provider`, `tool_steps`, and `evidence` copied from tool results. Then the graph ends. |
+| `tool_limit` | Raises `ProviderError("tool round limit reached")`; it does not silently truncate the model's requested operations. | The exception leaves the graph. `TrafficAgent.ask()` catches it and, when `fallback_to_local` is enabled, starts a new graph invocation in local mode. If fallback is disabled, it returns an error response. |
+| `local_fallback` | Calls `TrafficAgent._ask_local()`. This uses deterministic keyword/intent rules to select a tool and fixed bounded arguments. It does not call Meta and is not an LLM. | Sets `result` with the local answer, `provider="local_tools"`, executed tool steps, and evidence; it also includes the provider/fallback reason when applicable. Then the graph ends. |
 
-The workflow does not expose a live-signal write tool. Model-generated arguments cannot bypass the tool allowlist or the SUMO safety controller. Tool results are experiment outputs, not instructions to roadside controllers. The request state is not a persistent chat memory between application requests.
+#### What Meta is asked to do
 
-The city demand estimator is a second, separate LangGraph graph in `aatc/city_data/demand_workflow.py`. Its nodes read passenger-road lane-kilometers from the selected SUMO network and calculate an expected number of trip departures from insertion density, scenario multiplier, and duration. It is deterministic arithmetic; it does not call Meta. The executive report may make a separate optional Meta request for narrative text; exact comparison values remain built from the saved SUMO metrics.
+The system prompt in `aatc/agent/prompts.py` makes SUMO outputs and saved experiment files the source of truth. It tells Meta to request tools for claims about traffic, predictions, controller performance, or signal timing; distinguish measured SUMO results from estimates; report failures or missing evidence; and avoid inventing outcomes. Meta interprets the user request, selects among the tool schemas, supplies bounded JSON arguments, then explains the returned evidence in readable language. It does not get a general-purpose Python or TraCI session.
+
+The available tool names are `simulate_city_scenario`, `evaluate_city_policy`, `run_simulation`, `compare_controllers`, `compare_ppo_with_fixed`, `generate_traffic_scenario`, `optimize_signal`, `predict_traffic`, `inspect_experiment`, and `explain_last_transition`. `TrafficAgentTools` maps those names to specific Python functions. For example, `optimize_signal` only evaluates the allowed bounded timing candidates; `evaluate_city_policy` loads an existing policy and compares it in SUMO; `predict_traffic` calculates a short linear projection from saved samples. Every operation is executed locally and its result is returned to Meta as evidence.
+
+There is no live-signal write tool. Meta's arguments cannot bypass the tool registry or the safety controller inside SUMO. Tool results are simulation/analysis outputs, not instructions to roadside controllers. Requests have no persistent chat memory.
+
+### Separate LangGraph graph: city vehicle-demand estimate
+
+`aatc/city_data/demand_workflow.py` defines a second graph used before city SUMO demand generation. It is not part of the Meta conversation and does not call an LLM:
+
+```mermaid
+flowchart LR
+    S[Start with network, density, multiplier, duration] --> M[measure_network_lane_kilometers]
+    M --> E[estimate_vehicle_count]
+    E --> X[Return estimate and assumptions]
+```
+
+| Node | Calculation | Output |
+| --- | --- | --- |
+| `measure_network_lane_kilometers` | Loads the selected SUMO network through `sumolib`, keeps edges that allow passenger vehicles, sums each edge's length multiplied by its lane count, and converts meters to lane-kilometers. It also counts eligible road edges. | `lane_km` and `passenger_edge_count`. The graph stops with an error if the network contains no passenger-accessible lane length. |
+| `estimate_vehicle_count` | Computes `base insertion density × scenario multiplier × passenger lane-kilometers × duration seconds ÷ 3600`. | Rounded estimate, input assumptions, effective density, and a note that this is expected departures before route validation/insertion constraints—not an observed count. |
+
+The dashboard displays the estimate for review; SUMO's route generator and insertion rules determine what actually departs. This graph makes the arithmetic and network size explicit, but it does not calibrate synthetic traffic to detector counts.
+
+### Meta-assisted simulation report
+
+The executive report uses Meta for one optional narrative request through `MetaProvider.complete(messages, tools=[])`; this report call is direct and does **not** run through the traffic-agent LangGraph. The report code sends a facts-only JSON bundle derived from the saved comparison and asks Meta for five plain-language sections: decision, test description, changes, meaning of metrics, and next steps. It instructs the model not to invent numbers or causes. The deterministic report renderer supplies the exact before/after table and signal measurements from SUMO data. If credentials are absent or the request fails, it writes the local template instead; previously saved Meta narrative may be retained when regenerating offline.
 
 To check Meta connectivity after setting `.env`, run:
 
